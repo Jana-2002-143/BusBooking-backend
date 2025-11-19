@@ -9,10 +9,11 @@ RUN mvn -e -X clean package -DskipTests
 FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 
-# Copy jar from builder
+# Copy jar
 COPY --from=builder /app/target/*.jar app.jar
 
-EXPOSE 8081   # your backend port
+# Expose correct port (NO COMMENTS ALLOWED)
+EXPOSE 8081
 
 # Start Spring Boot
 ENTRYPOINT ["java", "-jar", "app.jar"]
