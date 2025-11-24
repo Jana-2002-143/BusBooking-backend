@@ -8,15 +8,15 @@ import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
-        List<Booking> findByBookIdAndBusName(Long bookId, String busName);
+    List<Booking> findByBookIdAndBusName(Long bookId, String busName);
 
-        boolean existsBySeatNoAndBusNameAndTravelDate(
-                        Integer seatNo,
-                        String busName,
-                        String travelDate);
+    boolean existsBySeatNoAndBusNameAndTravelDate(
+            Integer seatNo,
+            String busName,
+            String travelDate);
 
-        Optional<Booking> findBySeatNoAndBusNameAndBookId(
-                        Integer seatNo,
-                        String busName,
-                        Long bookId);
+    Optional<Booking> findBySeatNoAndBusNameAndBookId(
+            Integer seatNo,
+            String busName,
+            Long bookId);
 }
