@@ -8,7 +8,10 @@ import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
+
     List<Booking> findByBookIdAndBusName(Long bookId, String busName);
+
+    List<Booking> findByBusNameAndTravelDate(String busName, String travelDate);
 
     boolean existsBySeatNoAndBusNameAndTravelDate(
             Integer seatNo,

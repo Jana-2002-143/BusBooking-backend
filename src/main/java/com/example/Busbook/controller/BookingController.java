@@ -6,9 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -22,13 +21,13 @@ public class BookingController {
 
         if (booking.getPassengerName() == null || booking.getPassengerEmail() == null || booking.getTravelDate() == null || booking.getBusName() == null || booking.getSeatNo() == null) {
 
-            return ResponseEntity.badRequest().body("Missing required fields");
+            return ResponseEntity.badRequest().body(Map.of("error","Missing required fields"));
         }
 
         boolean exists = bookingRepository.existsBySeatNoAndBusNameAndTravelDate(booking.getSeatNo(), booking.getBusName(), booking.getTravelDate());
 
         if (exists) {
-            return ResponseEntity.status(409).body("Seat already booked");
+            return ResponseEntity.status(409).body(Map.of("error","Seat already booked"));
         }
 
         Booking saved = bookingRepository.save(booking);
@@ -43,24 +42,45 @@ public class BookingController {
         String travelDate = req.get("travelDate");
 
         if (seatNoStr == null || busName == null || travelDate == null) {
-            return ResponseEntity.badRequest().body("Missing fields");
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing fields"));
         }
 
         Integer seatNo;
         try {
             seatNo = Integer.parseInt(seatNoStr);
+
+            if (seatNo < 1 || seatNo > 40) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Seat number must be between 1 to 40"));
+            }
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Invalid seat number");
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid seat number"));
         }
 
-        boolean exists = bookingRepository.existsBySeatNoAndBusNameAndTravelDate(seatNo, busName, travelDate);
+        boolean exists = bookingRepository.existsBySeatNoAndBusNameAndTravelDate(
+                seatNo, busName, travelDate
+        );
 
-        if (exists) {
-            return ResponseEntity.ok("UNAVAILABLE");
-        } else {
-            return ResponseEntity.ok("AVAILABLE");
-        }
+        List<Integer> bookedSeats = bookingRepository
+                .findByBusNameAndTravelDate(busName, travelDate)
+                .stream()
+                .map(Booking::getSeatNo)
+                .collect(Collectors.toList());
+
+        List<Integer> allSeats = new ArrayList<>();
+        for (int i = 1; i <= 40; i++) allSeats.add(i);
+
+        List<Integer> availableSeats = allSeats.stream()
+                .filter(s -> !bookedSeats.contains(s))
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("seatStatus", exists ? "UNAVAILABLE" : "AVAILABLE");
+        response.put("availableSeats", availableSeats);
+
+        return ResponseEntity.ok(response);
     }
+
 
     @PostMapping("/view")
     public ResponseEntity<?> viewTicket(@RequestBody Map<String, String> request) {
@@ -69,7 +89,7 @@ public class BookingController {
         String busName = request.get("busName");
 
         if (bookIdStr == null || busName == null) {
-            return ResponseEntity.badRequest().body("Missing fields");
+            return ResponseEntity.badRequest().body(Map.of("error","Missing fields"));
         }
 
         Long bookId = Long.parseLong(bookIdStr);
@@ -77,7 +97,7 @@ public class BookingController {
         List<Booking> bookings = bookingRepository.findByBookIdAndBusName(bookId, busName);
 
         if (bookings.isEmpty()) {
-            return ResponseEntity.status(404).body("No ticket found");
+            return ResponseEntity.status(404).body(Map.of("error","No ticket found"));
         }
 
         return ResponseEntity.ok(bookings);
@@ -92,7 +112,7 @@ public class BookingController {
         String bookIdStr = req.get("bookId");
 
         if (seatNoStr == null || busName == null || bookIdStr == null) {
-            return ResponseEntity.badRequest().body("Missing fields");
+            return ResponseEntity.badRequest().body(Map.of("error","Missing fields"));
         }
 
         Integer seatNo;
@@ -102,16 +122,16 @@ public class BookingController {
             seatNo = Integer.parseInt(seatNoStr);
             bookId = Long.parseLong(bookIdStr);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Invalid number format");
+            return ResponseEntity.badRequest().body(Map.of("error","Invalid number format"));
         }
 
         Optional<Booking> bookingOpt = bookingRepository.findBySeatNoAndBusNameAndBookId(seatNo, busName, bookId);
 
         if (bookingOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("Booking not found");
+            return ResponseEntity.status(404).body(Map.of("error","Booking not found"));
         }
 
         bookingRepository.delete(bookingOpt.get());
-        return ResponseEntity.ok("Booking cancelled successfully");
+        return ResponseEntity.ok(Map.of("message", "Booking cancelled successfully"));
     }
 }
