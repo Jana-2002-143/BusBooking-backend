@@ -35,24 +35,22 @@ public class BookingController {
     }
 
     @PostMapping("/checkSeat")
-    public ResponseEntity<?> checkSeat(@RequestBody Map<String, String> req) {
+    public ResponseEntity<?> checkSeat(@RequestBody Map<String, Object> req) {
 
-        String seatNoStr = req.get("seatNo");
-        String busName = req.get("busName");
-        String travelDate = req.get("travelDate");
+        Object seatNoObj = req.get("seatNo");
+        String busName = (String) req.get("busName");
+        String travelDate = (String) req.get("travelDate");
 
-        if (seatNoStr == null || busName == null || travelDate == null) {
+        if (seatNoObj == null || busName == null || travelDate == null) {
             return ResponseEntity.badRequest().body(Map.of("error", "Missing fields"));
         }
 
         Integer seatNo;
         try {
-            seatNo = Integer.parseInt(seatNoStr);
-
+            seatNo = Integer.parseInt(seatNoObj.toString());
             if (seatNo < 1 || seatNo > 40) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Seat number must be between 1 to 40"));
             }
-
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid seat number"));
         }
@@ -80,7 +78,6 @@ public class BookingController {
 
         return ResponseEntity.ok(response);
     }
-
 
     @PostMapping("/view")
     public ResponseEntity<?> viewTicket(@RequestBody Map<String, String> request) {
