@@ -16,24 +16,44 @@ public class BookingController {
     @Autowired
     private BookingRepository bookingRepository;
 
+    // ---------------------------------------------------------
+    // BOOK TICKET
+    // ---------------------------------------------------------
     @PostMapping("/book")
     public ResponseEntity<?> bookTicket(@RequestBody Booking booking) {
 
-        if (booking.getPassengerName() == null || booking.getPassengerEmail() == null || booking.getTravelDate() == null || booking.getBusName() == null || booking.getSeatNo() == null) {
+        if (booking.getPassengerName() == null ||
+                booking.getPassengerEmail() == null ||
+                booking.getTravelDate() == null ||
+                booking.getBusName() == null ||
+                booking.getSeatNo() == null) {
 
-            return ResponseEntity.badRequest().body(Map.of("error","Missing required fields"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing required fields"));
         }
 
-        boolean exists = bookingRepository.existsBySeatNoAndBusNameAndTravelDate(booking.getSeatNo(), booking.getBusName(), booking.getTravelDate());
+        // Check if seat already booked
+        boolean exists = bookingRepository.existsBySeatNoAndBusNameAndTravelDate(
+                booking.getSeatNo(),
+                booking.getBusName(),
+                booking.getTravelDate()
+        );
 
         if (exists) {
-            return ResponseEntity.status(409).body(Map.of("error","Seat already booked"));
+            return ResponseEntity.status(409).body(Map.of("error", "Seat already booked"));
         }
 
         Booking saved = bookingRepository.save(booking);
-        return ResponseEntity.ok(saved);
+
+        // Return booking ID only (clean response)
+        return ResponseEntity.ok(Map.of(
+                "message", "Booking successful",
+                "bookId", saved.getBookId()
+        ));
     }
 
+    // ---------------------------------------------------------
+    // CHECK SEAT (FIXED VERSION)
+    // ---------------------------------------------------------
     @PostMapping("/checkSeat")
     public ResponseEntity<?> checkSeat(@RequestBody Map<String, Object> req) {
 
@@ -45,87 +65,101 @@ public class BookingController {
             return ResponseEntity.badRequest().body(Map.of("error", "Missing fields"));
         }
 
+        // Safe convert seatNo (can be number or string)
         Integer seatNo;
         try {
             seatNo = Integer.parseInt(seatNoObj.toString());
             if (seatNo < 1 || seatNo > 40) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Seat number must be between 1 to 40"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Seat number must be between 1–40"));
             }
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid seat number"));
         }
 
+        // Is seat booked?
         boolean exists = bookingRepository.existsBySeatNoAndBusNameAndTravelDate(
                 seatNo, busName, travelDate
         );
 
+        // Fetch booked seats
         List<Integer> bookedSeats = bookingRepository
                 .findByBusNameAndTravelDate(busName, travelDate)
                 .stream()
                 .map(Booking::getSeatNo)
                 .collect(Collectors.toList());
 
+        // All seats 1–40
         List<Integer> allSeats = new ArrayList<>();
         for (int i = 1; i <= 40; i++) allSeats.add(i);
 
+        // Available seats
         List<Integer> availableSeats = allSeats.stream()
                 .filter(s -> !bookedSeats.contains(s))
                 .collect(Collectors.toList());
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("seatStatus", exists ? "UNAVAILABLE" : "AVAILABLE");
-        response.put("availableSeats", availableSeats);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of(
+                "seatStatus", exists ? "UNAVAILABLE" : "AVAILABLE",
+                "availableSeats", availableSeats
+        ));
     }
 
+    // ---------------------------------------------------------
+    // VIEW TICKET
+    // ---------------------------------------------------------
     @PostMapping("/view")
-    public ResponseEntity<?> viewTicket(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> viewTicket(@RequestBody Map<String, Object> req) {
 
-        String bookIdStr = request.get("bookId");
-        String busName = request.get("busName");
+        Object bookIdObj = req.get("bookId");
+        String busName = (String) req.get("busName");
 
-        if (bookIdStr == null || busName == null) {
-            return ResponseEntity.badRequest().body(Map.of("error","Missing fields"));
+        if (bookIdObj == null || busName == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing fields"));
         }
 
-        Long bookId = Long.parseLong(bookIdStr);
+        Long bookId;
+        try {
+            bookId = Long.parseLong(bookIdObj.toString());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid book ID"));
+        }
 
         List<Booking> bookings = bookingRepository.findByBookIdAndBusName(bookId, busName);
 
         if (bookings.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("error","No ticket found"));
+            return ResponseEntity.status(404).body(Map.of("error", "No ticket found"));
         }
 
         return ResponseEntity.ok(bookings);
     }
 
-
+    // ---------------------------------------------------------
+    // CANCEL TICKET
+    // ---------------------------------------------------------
     @PostMapping("/cancel")
-    public ResponseEntity<?> cancel(@RequestBody Map<String, String> req) {
+    public ResponseEntity<?> cancel(@RequestBody Map<String, Object> req) {
 
-        String seatNoStr = req.get("seatNo");
-        String busName = req.get("busName");
-        String bookIdStr = req.get("bookId");
+        Object seatNoObj = req.get("seatNo");
+        String busName = (String) req.get("busName");
+        Object bookIdObj = req.get("bookId");
 
-        if (seatNoStr == null || busName == null || bookIdStr == null) {
-            return ResponseEntity.badRequest().body(Map.of("error","Missing fields"));
+        if (seatNoObj == null || busName == null || bookIdObj == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Missing fields"));
         }
 
         Integer seatNo;
         Long bookId;
-
         try {
-            seatNo = Integer.parseInt(seatNoStr);
-            bookId = Long.parseLong(bookIdStr);
+            seatNo = Integer.parseInt(seatNoObj.toString());
+            bookId = Long.parseLong(bookIdObj.toString());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error","Invalid number format"));
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid number format"));
         }
 
-        Optional<Booking> bookingOpt = bookingRepository.findBySeatNoAndBusNameAndBookId(seatNo, busName, bookId);
+        Optional<Booking> bookingOpt =
+                bookingRepository.findBySeatNoAndBusNameAndBookId(seatNo, busName, bookId);
 
         if (bookingOpt.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("error","Booking not found"));
+            return ResponseEntity.status(404).body(Map.of("error", "Booking not found"));
         }
 
         bookingRepository.delete(bookingOpt.get());
