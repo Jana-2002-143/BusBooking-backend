@@ -69,7 +69,7 @@ public class BookingController {
         Integer seatNo;
         try {
             seatNo = Integer.parseInt(seatNoObj.toString());
-            if (seatNo < 1 || seatNo > 40) {
+            if (seatNo < 1 || seatNo > 28) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Seat number must be between 1–40"));
             }
         } catch (Exception e) {
@@ -88,9 +88,9 @@ public class BookingController {
                 .map(Booking::getSeatNo)
                 .collect(Collectors.toList());
 
-        // All seats 1–40
+        // All seats 1-28
         List<Integer> allSeats = new ArrayList<>();
-        for (int i = 1; i <= 40; i++) allSeats.add(i);
+        for (int i = 1; i <= 28; i++) allSeats.add(i);
 
         // Available seats
         List<Integer> availableSeats = allSeats.stream()
