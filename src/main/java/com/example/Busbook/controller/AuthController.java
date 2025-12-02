@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
+import java.util.*;
 import java.util.Optional;
 
 @RestController
@@ -60,7 +60,13 @@ public class AuthController {
 
         return ResponseEntity.ok(saved);
     }
-
+    @GetMapping("/login")
+    public Map<String, Object> getLoginData() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "GET login API working!");
+        response.put("users", userRepository.findAll());
+        return response;
+    }
     // ✅ LOGIN API - correctly placed inside the class now
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User request) {
