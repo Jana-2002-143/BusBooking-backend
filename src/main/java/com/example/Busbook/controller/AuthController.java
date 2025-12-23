@@ -60,7 +60,7 @@ public class AuthController {
 
         return ResponseEntity.ok(saved);
     }
-    @GetMapping("/login")
+    @GetMapping("/test")
     public Map<String, Object> getLoginData() {
         Map<String, Object> response = new HashMap<>();
         response.put("message", "GET login API working!");
